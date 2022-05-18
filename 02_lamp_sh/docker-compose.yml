@@ -1,0 +1,73 @@
+version: '3.3'
+services:
+  mysqldb:
+    image: mysql:8
+    restart: always
+    command: --max_allowed_packet=32505856
+    environment:
+      MYSQL_DATABASE: 'lamp_db'
+      MYSQL_USER: 'lamp_user'
+      MYSQL_PASSWORD: '89423reufabvjkwsagiuolr'
+      MYSQL_ROOT_PASSWORD: 'vfASDf433dajhgbfieruwep23edefgregvFGfj'
+    volumes:
+      - ./data/mysql8:/var/lib/mysql
+    ports:
+      - '23306:3306'
+    networks:
+      - lamp
+
+  mssqldb:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - SA_PASSWORD=Pass@word
+      - ACCEPT_EULA=Y
+    volumes:
+      - ./data/mssql2019:/var/opt/mssql
+    ports:
+      - "22433:1433"
+    networks:
+      - lamp
+
+  httpd:
+    # image: httpd:2.4
+    restart: always
+    # ports:
+    #   - "80:80"
+    build: ./build/httpd
+    volumes:
+      - ./data/lamp:/src/public
+    depends_on:
+      - php
+      - mysqldb
+      - mssqldb
+    deploy:
+      replicas: 3
+    networks:
+      - lamp
+
+  php:
+    # image: php:8-fpm
+    restart: always
+    build: ./build/php
+    volumes:
+      - ./data/lamp/:/src/public
+    depends_on:
+      - mysqldb
+      - mssqldb
+    networks:
+      - lamp
+
+  lb-nginx:
+    image: nginx:lb
+    restart: always
+    build: ./build/nginx
+    volumes:
+      - ./build/nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "8080:80"
+    networks:
+      - lamp
+
+networks:
+  lamp:
+    driver: overlay
